@@ -7,8 +7,17 @@ builder.Services.AddDbContextFactory<SensorDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("SensorDatabase")));
 builder.Services.Configure<MqttSettings>(builder.Configuration.GetSection("Mqtt"));
 builder.Services.AddHostedService<MqttIngestionService>();
+builder.Services.AddSignalR();
+builder.Services.AddCors(options =>
+    options.AddPolicy("Dashboard", policy =>
+        policy.WithOrigins("http://localhost:5275", "https://localhost:7214")
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials()));
 
 var app = builder.Build();
+
+app.UseCors("Dashboard");
 
 await using (var scope = app.Services.CreateAsyncScope())
 {
@@ -33,5 +42,7 @@ app.MapGet("/api/readings/latest", async (SensorDbContext database, Cancellation
         .AsNoTracking()
         .OrderByDescending(reading => reading.ReadTime)
         .FirstOrDefaultAsync(cancellationToken));
+
+app.MapHub<SensorHub>("/hubs/sensors");
 
 app.Run();

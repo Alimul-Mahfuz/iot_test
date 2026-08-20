@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.Text.Json;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using MQTTnet;
@@ -9,6 +10,7 @@ namespace SensorApi;
 public sealed class MqttIngestionService(
     IDbContextFactory<SensorDbContext> databaseFactory,
     IOptions<MqttSettings> options,
+    IHubContext<SensorHub> hubContext,
     ILogger<MqttIngestionService> logger) : BackgroundService
 {
     private readonly MqttSettings _settings = options.Value;
@@ -77,6 +79,8 @@ public sealed class MqttIngestionService(
             await using var database = await databaseFactory.CreateDbContextAsync(stoppingToken);
             database.Readings.Add(reading);
             await database.SaveChangesAsync(stoppingToken);
+
+            await hubContext.Clients.All.SendAsync(SensorHub.ReadingReceivedEvent, reading, stoppingToken);
         }
         catch (JsonException exception)
         {
