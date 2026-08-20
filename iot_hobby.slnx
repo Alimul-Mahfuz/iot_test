@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Esp32Simulator/Esp32Simulator.csproj" />
+  <Project Path="SensorApi/SensorApi.csproj" />
+</Solution>
